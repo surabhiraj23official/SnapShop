@@ -168,7 +168,7 @@ class BertNet(nn.Module):
 # =============================================================================
 
 class SearchEngine:
-    def __init__(self, data_dir, checkpoint_dir, device='cuda'):
+    def __init__(self, data_dir, checkpoint_dir, cache_dir=None, device='cuda'):
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         self.data_dir = Path(data_dir)
         self.checkpoint_dir = Path(checkpoint_dir)
@@ -205,7 +205,7 @@ class SearchEngine:
         self.lgbm_ranker = None
 
         # Cache
-        self.cache_dir = Path(__file__).resolve().parent.parent / 'cache'
+        self.cache_dir = Path(cache_dir) if cache_dir else Path(__file__).resolve().parent.parent / 'cache'
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize: load models immediately on startup
@@ -349,25 +349,56 @@ class SearchEngine:
             print(f"    Failed to load {key}: {e}")
 
     # ---- Embedding Computation ----
+    def _cache_paths(self):
+        return {
+            'img': self.cache_dir / 'img_feats.npy',
+            'bert': self.cache_dir / 'text_feats.npy',
+            'combined': self.cache_dir / 'combined_feats.npy',
+            'lgbm': self.cache_dir / 'lgbm_ranker.txt',
+        }
+
+    def _legacy_cache_paths(self):
+        return {
+            'img': self.cache_dir / 'img_feats_v2.npy',
+            'bert': self.cache_dir / 'bert_feats_v2.npy',
+            'combined': self.cache_dir / 'combined_feats_v2.npy',
+        }
+
     def _embeddings_cached(self):
         """Check if all embedding cache files exist and match the data size."""
-        img_cache = self.cache_dir / 'img_feats_v2.npy'
-        bert_cache = self.cache_dir / 'bert_feats_v2.npy'
-        combined_cache = self.cache_dir / 'combined_feats_v2.npy'
-        return img_cache.exists() and bert_cache.exists() and combined_cache.exists()
+        cache_paths = self._cache_paths()
+        img_cache = cache_paths['img']
+        bert_cache = cache_paths['bert']
+        combined_cache = cache_paths['combined']
+        if img_cache.exists() and bert_cache.exists() and combined_cache.exists():
+            return True
+
+        legacy = self._legacy_cache_paths()
+        return legacy['img'].exists() and legacy['bert'].exists() and legacy['combined'].exists()
 
     def _load_or_compute_embeddings(self):
-        img_cache = self.cache_dir / 'img_feats_v2.npy'
-        bert_cache = self.cache_dir / 'bert_feats_v2.npy'
-        combined_cache = self.cache_dir / 'combined_feats_v2.npy'
+        cache_paths = self._cache_paths()
+        img_cache = cache_paths['img']
+        bert_cache = cache_paths['bert']
+        combined_cache = cache_paths['combined']
+        legacy_cache_paths = self._legacy_cache_paths()
 
         loaded = False
         if self._embeddings_cached():
             print("Loading cached embeddings (skipping model loading)...")
             try:
-                self.img_feats = np.load(img_cache).astype(np.float32)
-                self.bert_feats = np.load(bert_cache).astype(np.float32)
-                self.combined_feats = np.load(combined_cache).astype(np.float32)
+                if img_cache.exists() and bert_cache.exists() and combined_cache.exists():
+                    active_img_cache = img_cache
+                    active_bert_cache = bert_cache
+                    active_combined_cache = combined_cache
+                else:
+                    active_img_cache = legacy_cache_paths['img']
+                    active_bert_cache = legacy_cache_paths['bert']
+                    active_combined_cache = legacy_cache_paths['combined']
+
+                self.img_feats = np.load(active_img_cache).astype(np.float32)
+                self.bert_feats = np.load(active_bert_cache).astype(np.float32)
+                self.combined_feats = np.load(active_combined_cache).astype(np.float32)
                 if len(self.img_feats) == len(self.df):
                     loaded = True
                     print(f"  img_feats:      {self.img_feats.shape}")
@@ -499,7 +530,7 @@ class SearchEngine:
             print("LightGBM not available. Skipping re-ranker.")
             return
 
-        lgbm_cache = self.cache_dir / 'lgbm_ranker.txt'
+        lgbm_cache = self._cache_paths()['lgbm']
 
         if lgbm_cache.exists():
             print("Loading cached LightGBM ranker...")

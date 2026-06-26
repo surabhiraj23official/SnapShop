@@ -1,8 +1,8 @@
 """
-Shopee Product Matching - v3 Training Pipeline
-===============================================
+Shopee Product Matching production training pipeline
+====================================================
 
-Generates and trains everything used by the webapp inference engine:
+Generates and trains everything used by the web app inference engine:
 
   Stage 1   : Metric Learning
               5 embedding models with CurricularFace/ArcFace losses,
@@ -612,7 +612,7 @@ def main():
     t_start = time.time()
 
     print("=" * 70)
-    print("  Shopee Product Matching - v3 Training Pipeline")
+    print("  Shopee Product Matching - Production Training Pipeline")
     print("  Stage 1 : Metric Learning (DeiT, EfficientNet-B3, BERT x3)")
     print("  Stage 2 : LightGBM LambdaRank Re-Ranker")
     print("=" * 70)
@@ -623,8 +623,8 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device: {device}")
 
-    logger = setup_logger('v3_train', str(Config.OUTPUT_DIR),
-                          'v3_training.log')
+    logger = setup_logger('production_train', str(Config.OUTPUT_DIR),
+                          'production_training.log')
 
     # -----------------------------------------------------------------
     # Load & prepare data
@@ -695,6 +695,12 @@ def main():
     img_feats, txt_feats, combined_feats = build_concatenated_embeddings(
         image_embeddings, text_embeddings, logger,
     )
+    np.save(Config.IMG_FEATURES_PATH, img_feats)
+    np.save(Config.TEXT_FEATURES_PATH, txt_feats)
+    np.save(Config.COMBINED_FEATURES_PATH, combined_feats)
+    logger.info(f"Saved image features -> {Config.IMG_FEATURES_PATH}")
+    logger.info(f"Saved text features -> {Config.TEXT_FEATURES_PATH}")
+    logger.info(f"Saved combined features -> {Config.COMBINED_FEATURES_PATH}")
 
     # =================================================================
     # STAGE 2: LightGBM Re-Ranker
@@ -709,7 +715,7 @@ def main():
         )
 
         if lgbm_model is not None:
-            lgbm_path = Config.OUTPUT_DIR / 'lgbm_ranker.txt'
+            lgbm_path = Config.LGBM_MODEL_PATH
             lgbm_model.save_model(str(lgbm_path))
             logger.info(f"  Saved -> {lgbm_path}")
     except ImportError as e:
@@ -733,7 +739,7 @@ def main():
         size_mb = f.stat().st_size / (1024 * 1024)
         print(f"    {f.name:35s} {size_mb:8.1f} MB")
 
-    lgbm_path = Config.OUTPUT_DIR / 'lgbm_ranker.txt'
+    lgbm_path = Config.LGBM_MODEL_PATH
     if lgbm_path.exists():
         size_mb = lgbm_path.stat().st_size / (1024 * 1024)
         print(f"    {'lgbm_ranker.txt':35s} {size_mb:8.1f} MB")

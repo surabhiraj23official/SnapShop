@@ -1,10 +1,8 @@
 """
-Shopee Product Matching - v3 Training Pipeline Configuration
-Full competition pipeline: metric learning + 2nd stage meta-models
+Shopee Product Matching production training configuration.
 
-Generates the 5 production models used by the webapp inference engine:
-  Image:  deit_small.pth, efficientnet_b3.pth
-  Text:   bert_indonesian.pth, bert_multilingual.pth, xlm_roberta.pth
+Stores shared datasets and generated artifacts in top-level project
+directories so training and serving read from the same locations.
 """
 
 import os
@@ -14,16 +12,20 @@ from pathlib import Path
 class Config:
     # -- Directory Structure -------------------------------------------------
     BASE_DIR = Path(__file__).resolve().parent
-    PROJECT_ROOT = BASE_DIR.parent.parent          # Project/
+    PROJECT_ROOT = BASE_DIR.parent.parent
 
-    # Webapp paths (where the production models live)
-    WEBAPP_ROOT = PROJECT_ROOT / 'webapp'
-    INPUT_DIR = WEBAPP_ROOT / 'input'
-    OUTPUT_DIR = WEBAPP_ROOT / 'output'
-    CHECKPOINT_DIR = OUTPUT_DIR                     # Save directly to webapp/output
+    DATA_DIR = PROJECT_ROOT / 'data' / 'shopee-product-matching'
+    ARTIFACTS_DIR = PROJECT_ROOT / 'artifacts'
+    OUTPUT_DIR = ARTIFACTS_DIR
+    CHECKPOINT_DIR = ARTIFACTS_DIR / 'checkpoints'
+    CACHE_DIR = ARTIFACTS_DIR / 'cache'
 
-    TRAIN_CSV = INPUT_DIR / 'train.csv'
-    TRAIN_IMAGES = INPUT_DIR / 'train_images'
+    TRAIN_CSV = DATA_DIR / 'train.csv'
+    TRAIN_IMAGES = DATA_DIR / 'train_images'
+    IMG_FEATURES_PATH = CACHE_DIR / 'img_feats.npy'
+    TEXT_FEATURES_PATH = CACHE_DIR / 'text_feats.npy'
+    COMBINED_FEATURES_PATH = CACHE_DIR / 'combined_feats.npy'
+    LGBM_MODEL_PATH = CACHE_DIR / 'lgbm_ranker.txt'
 
     SEED = 42
     NUM_WORKERS = 2
@@ -129,3 +131,4 @@ class Config:
     def setup(cls):
         cls.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         cls.CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+        cls.CACHE_DIR.mkdir(parents=True, exist_ok=True)

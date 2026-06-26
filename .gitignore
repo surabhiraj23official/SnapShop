@@ -1,3 +1,6 @@
-webapp/input/
-webapp/output/
-webapp/webapp/cache/
+data/shopee-product-matching/
+artifacts/checkpoints/
+artifacts/cache/
+artifacts/*.zip
+__pycache__/
+*.pyc

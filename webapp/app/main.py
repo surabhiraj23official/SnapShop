@@ -12,15 +12,15 @@ import io
 
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = BASE_DIR.parent
-DATA_DIR = PROJECT_ROOT / 'input'
-CHECKPOINT_DIR = PROJECT_ROOT / 'output'
+WEBAPP_ROOT = BASE_DIR.parent
+PROJECT_ROOT = WEBAPP_ROOT.parent
+DATA_DIR = PROJECT_ROOT / 'data' / 'shopee-product-matching'
+CHECKPOINT_DIR = PROJECT_ROOT / 'artifacts' / 'checkpoints'
+CACHE_DIR = PROJECT_ROOT / 'artifacts' / 'cache'
 STATIC_IMAGES_DIR = DATA_DIR / 'train_images'
 
 # Add backend to path
 sys.path.append(str(BASE_DIR))
-# Add ml_training to path for shopee_matching
-sys.path.append(str(PROJECT_ROOT / 'ml_training' / 'ml_training'))
 
 from backend.inference_engine import SearchEngine
 
@@ -30,6 +30,7 @@ print(f"Server Config:")
 print(f"  - Project Root: {PROJECT_ROOT}")
 print(f"  - Data Dir: {DATA_DIR}")
 print(f"  - Checkpoints: {CHECKPOINT_DIR}")
+print(f"  - Cache: {CACHE_DIR}")
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -48,7 +49,7 @@ engine = None
 async def startup_event():
     global engine
     print("Initialize Engine...")
-    engine = SearchEngine(str(DATA_DIR), str(CHECKPOINT_DIR))
+    engine = SearchEngine(str(DATA_DIR), str(CHECKPOINT_DIR), cache_dir=str(CACHE_DIR))
     print("Engine Ready!")
 
 @app.get("/", response_class=HTMLResponse)

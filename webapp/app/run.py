@@ -3,7 +3,7 @@ import os
 import sys
 
 if __name__ == "__main__":
-    # Ensure we are in the webapp directory context
+    # Ensure relative template/static paths resolve from the app directory.
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     print("Starting PriceMatch AI Web Server...")
     print("Open your browser at http://localhost:8000")
